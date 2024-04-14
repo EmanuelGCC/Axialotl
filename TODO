@@ -1,0 +1,26 @@
+[] Add Axialotl to github, just private it for now
+
+[] Add text support
+	- fonts... and that's it.
+
+[] Look into the posibility of combining the element buffer and the vertex buffer
+[] Make all default shapes have a functioning texture (as an option at least)
+[] Make Spheres efficient
+
+==== Completed ====
+
+[X] Finish the whole input system.
+	X Add controller support
+	X Add more key events
+
+[X] Add rotations
+
+[X] Add more shapes
+	X Square
+	X cube
+	X Triangle
+	X Tetrahedron
+	X Circle
+	X Sphere
+
+[X] Fix resizeing issue

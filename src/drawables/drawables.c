@@ -37,6 +37,7 @@
 
 #include "../struct_definitions.h"
 #include "geometry.h"
+#include "text.h"
 
 //=============//
 //  Functions  //
@@ -62,9 +63,6 @@ void axiaDestroyTexture(AxiaTexture *texture)
 AxiaError axiaLoadTextureSource(AxiaTexture texture, AxiaTextureFormat format,
 		const AxiaSize size, const uint8_t *data, bool bitmapped)
 {
-	if(data == NULL)
-		return AXIA_INVALID_ARG;
-
 	if(format != AXIA_RGBA && format != AXIA_RGB &&
 	   format != AXIA_RG   && format != AXIA_GRAY)
 		return AXIA_INVALID_ARG;
@@ -475,6 +473,184 @@ AxiaShape axiaCreateSphere(AxiaVec3 pos, float radious,
 	free(indices);
 
 	return sph;
+}
+
+	//========//
+	//  Text  //
+	//========//
+
+AxiaFont axiaCreateFont(const char *font_path, 
+                        uint8_t aprox_cuality,
+						bool mipmapped)
+{
+	FT_Library lib;
+	FT_Face    face;
+
+	FT_Init_FreeType(&lib);
+	if(FT_New_Face(lib, font_path, 0, &face))
+		return NULL;
+
+	AxiaFont font = malloc(sizeof(AxiaFont_t));
+
+	font->lib  = lib;
+	font->face = face;
+
+	font->textures = malloc(sizeof(uint32_t) * face->num_glyphs);
+	font->glyphs   = malloc(sizeof(AxiaGlyphDetails) * face->num_glyphs);
+
+	glGenTextures(face->num_glyphs, font->textures);
+
+	FT_Set_Pixel_Sizes(face, 0, aprox_cuality);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+	                (mipmapped)? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	FT_UInt  index;
+	FT_ULong code = FT_Get_First_Char(face, &index);
+	
+	while(index != 0)
+	{
+		if(FT_Load_Char(face, code, FT_LOAD_RENDER)) {
+			axiaDestroyFont(&font);
+			return NULL;
+		}
+
+		glBindTexture(GL_TEXTURE_2D, font->textures[index]);
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
+					 face->glyph->bitmap.width,
+					 face->glyph->bitmap.rows,
+					 0, GL_RED, GL_UNSIGNED_BYTE,
+					 face->glyph->bitmap.buffer);
+
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		font->glyphs[index] = (AxiaGlyphDetails){
+			axiaVec2((float)face->glyph->bitmap.width,
+					 (float)face->glyph->bitmap.rows),
+			axiaVec2((float)face->glyph->bitmap_left,
+					 (float)(face->glyph->bitmap.rows-face->glyph->bitmap_top)),
+			(float)(face->glyph->advance.x >> 6)
+		};
+
+		code = FT_Get_Next_Char(face, code, &index);
+	}
+
+	return font;
+}
+
+void axiaDestroyFont(AxiaFont *font)
+{
+	if(font == NULL)
+		return;
+
+	FT_Done_Face((*font)->face);
+	FT_Done_FreeType((*font)->lib);
+
+	glDeleteTextures((*font)->face->num_glyphs, (*font)->textures);
+
+	free((*font)->glyphs);
+	free((*font)->textures);
+	free(*font);
+}
+
+size_t axiaGetGlyphCount(AxiaFont font)
+{
+	return font->face->num_glyphs;
+}
+
+AxiaText axiaCreateText()
+{
+	AxiaText text = malloc(sizeof(AxiaText_t));
+	if(text == NULL)
+		return NULL;
+
+	float data[] = {
+		0.f, 0.f, 0.f,  1.f, 0.f, 0.f,
+		0.f, 1.f, 0.f,  1.f, 1.f, 0.f
+	};
+
+	axiaMakeMatDefault(text->model);
+	text->string   = NULL;
+	text->length   = 0;
+	text->format   = AXIA_FORMAT_UTF16;
+	text->color[0] = 1;
+	text->color[1] = 1;
+	text->color[2] = 1;
+	text->font     = NULL;
+
+	glGenVertexArrays(1, &text->vertex_array);
+	glGenBuffers(1, &text->vertex_buffer);
+
+	glBindVertexArray(text->vertex_array);
+	glBindBuffer(GL_ARRAY_BUFFER, text->vertex_buffer);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 12, data, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(AxiaVec3), (void*)0);
+
+	glEnableVertexAttribArray(0);
+
+	return text;
+}
+
+void axiaDestroyText(AxiaText *text)
+{
+	if(text == NULL)
+		return;
+
+	glDeleteVertexArrays(1, &(*text)->vertex_array);
+	glDeleteBuffers(1, &(*text)->vertex_buffer);
+
+	free(*text);
+}
+
+void axiaBindTextFont(AxiaText text, AxiaFont font)
+{
+	text->font = font;
+}
+
+void axiaSetTextString(AxiaText text, void *string, 
+                       uint32_t length, AxiaTextFormat format)
+{
+	text->string = string;
+	text->length = length;
+	if((format & (AXIA_FORMAT_UTF16 | AXIA_FORMAT_UTF8 | AXIA_FORMAT_UTF32)) == 0) {
+#ifdef AXIA_DEBUG
+		printf("[axiaSetTextString] : Invalid format\n");
+#endif
+		return;
+	}
+
+	text->format = format;
+}
+
+void *axiaGetTextString(AxiaText text) 
+{
+	return text->string;
+}
+
+uint32_t axiaGetTextLength(AxiaText text)
+{
+	return text->length;
+}
+
+AxiaTextFormat axiaGetTextFormat(AxiaText text)
+{
+	return text->format;
+}
+
+void axiaSetTextColor(AxiaText text, uint8_t r, uint8_t g, uint8_t b)
+{
+	text->color[0] = (float)r / 255;
+	text->color[1] = (float)g / 255;
+	text->color[2] = (float)b / 255;
+}
+
+float *axiaGetTextColor(AxiaText text)
+{
+	return text->color;
 }
 
 	//===============================//

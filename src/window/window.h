@@ -40,7 +40,7 @@ typedef enum {
 
 AxiaWindow axiaCreateWindow(
 		int32_t width, int32_t height, 
-		const char *title, AxiaShaderProgram *program, 
+		const char *title, 
 		AxiaWinOps options);
 
 void axiaDestroyWindow(AxiaWindow *win);

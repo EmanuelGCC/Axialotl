@@ -16,6 +16,7 @@
 
 #include "shaders/shaders.h"
 #include "../drawables/geometry.h"
+#include "../drawables/text.h"
 
 //================================//
 //  See render.c for definitions  //
@@ -70,3 +71,5 @@ void axiaUseFramebuffer(AxiaFramebuffer framebuffer);
 void axiaDrawShape(AxiaShape);
 
 void axiaDrawIndexedShape(AxiaShape);
+
+void axiaDrawText(AxiaText, AxiaFramebuffer target);

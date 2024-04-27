@@ -11,6 +11,13 @@
 #include "../struct_definitions.h"
 #include "window.h"
 
+//===================================//
+//  See axialotl/axia.c for deatils  //
+//  and initialization               //
+//===================================//
+extern uint32_t AXIA_VERSION_MAJOR;
+extern uint32_t AXIA_VERSION_MINOR;
+
 void framebuffer_callback(GLFWwindow *glfw_win, int w, int h)
 {
 	glViewport(0, 0, w, h);
@@ -37,7 +44,7 @@ static void axiaMouseTracking_fun(GLFWwindow*, double, double);
 
 AxiaWindow axiaCreateWindow(
 		int32_t width, int32_t height, 
-		const char *title, AxiaShaderProgram *program, 
+		const char *title, 
 		AxiaWinOps options)
 {	
 	AxiaWindow win = malloc(sizeof(AxiaWindow_t));
@@ -47,7 +54,8 @@ AxiaWindow axiaCreateWindow(
 	win->size.width  = width;
 	win->size.height = height;
 	win->title       = title;
-	win->shader      = AXIA_INVALID_SHADER_PROGRAM;	
+	win->basic_shader= AXIA_INVALID_SHADER_PROGRAM;
+	win->text_shader = AXIA_INVALID_SHADER_PROGRAM;
 	win->cursor      = NULL;
 	win->mouse.x     = 0;
 	win->mouse.y     = 0;
@@ -113,13 +121,7 @@ AxiaWindow axiaCreateWindow(
 
 	if((options & AXIA_WIN_NO_SHADER) != 0)
 		return win;
-
-	if(program != NULL) {
-		win->shader = *program;
-
-		return win;
-	}
-
+{
 const char vertex_code[] = "#version 330\n"
 "layout (location = 0) in vec3 vertex;\n"
 "layout (location = 1) in vec2 text;\n"
@@ -145,7 +147,7 @@ const char fragment_code[] = "#version 330\n"
 "    fragColor = texture(texture2D, textCoords, -1);\n"
 "}\0";
 
-	win->shader = axiaCreateShaderProgram();
+	win->basic_shader = axiaCreateShaderProgram();
 
 	AxiaShader vertex = 
 		axiaCreateShader(vertex_code, GL_VERTEX_SHADER);
@@ -164,10 +166,10 @@ const char fragment_code[] = "#version 330\n"
 		return NULL;
 	}
 
-	axiaAttachShader(win->shader, vertex);
-	axiaAttachShader(win->shader, fragment);
+	axiaAttachShader(win->basic_shader, vertex);
+	axiaAttachShader(win->basic_shader, fragment);
 
-	uint32_t success = axiaLinkProgram(win->shader);
+	uint32_t success = axiaLinkProgram(win->basic_shader);
 
 	axiaDestroyShader(&vertex);
 	axiaDestroyShader(&fragment);
@@ -176,8 +178,71 @@ const char fragment_code[] = "#version 330\n"
 		axiaDestroyWindow(&win);
 		return NULL;
 	}
+}{
 
-	glUseProgram(win->shader);
+const char vertex_code[] = "#version 330\n"
+"layout (location = 0) in vec3 vertex;\n"
+
+"uniform mat4 model;\n"
+"uniform vec4 glyph_data;\n"
+
+"out vec2 text_coords;\n"
+
+"void main()\n"
+"{\n"
+"    gl_Position = model * vec4("
+"                  vertex.xy * glyph_data.xy + glyph_data.zw,"
+"                  vertex.z, 1);\n"
+
+"    text_coords = vec2(vertex.x, 1-vertex.y);\n"
+"}\0";
+
+const char fragment_code[] = "#version 330\n"
+"in vec2 text_coords;\n"
+
+"uniform vec3 color;\n"
+"uniform sampler2D texture2D;\n"
+
+"out vec4 frag_color;\n"
+
+"void main()\n"
+"{\n"
+"    frag_color = vec4(color, texture(texture2D, text_coords).r);\n"
+"}\0";
+
+	win->text_shader = axiaCreateShaderProgram();
+
+	AxiaShader vertex = 
+		axiaCreateShader(vertex_code, GL_VERTEX_SHADER);
+
+	if(vertex == AXIA_INVALID_SHADER) {
+		axiaDestroyWindow(&win);
+		return NULL;
+	}
+
+	AxiaShader fragment = 
+		axiaCreateShader(fragment_code, GL_FRAGMENT_SHADER);
+
+	if(fragment == AXIA_INVALID_SHADER) {
+		axiaDestroyShader(&vertex);
+		axiaDestroyWindow(&win);
+		return NULL;
+	}
+
+	axiaAttachShader(win->text_shader, vertex);
+	axiaAttachShader(win->text_shader, fragment);
+
+	AxiaError success = axiaLinkProgram(win->text_shader);
+
+	axiaDestroyShader(&vertex);
+	axiaDestroyShader(&fragment);
+
+	if(success != AXIA_OK) {
+		axiaDestroyWindow(&win);
+		return NULL;
+	}
+}
+	glUseProgram(win->basic_shader);
 	glUniformMatrix4fv(0, 1, GL_FALSE, win->view.combined);
 
 	return win;
@@ -187,15 +252,18 @@ void axiaDestroyWindow(AxiaWindow *win)
 {
 	if(win == NULL)
 		return;
-	
-	if((*win)->shader !=AXIA_INVALID_SHADER_PROGRAM)
-		axiaDestroyShaderProgram(&(*win)->shader);
 
-	if((*win)->win == glfwGetCurrentContext())
-		glfwMakeContextCurrent(NULL);
+	if((*win)->basic_shader != AXIA_INVALID_SHADER_PROGRAM)
+		axiaDestroyShaderProgram(&(*win)->basic_shader);
+
+	if((*win)->text_shader != AXIA_INVALID_SHADER_PROGRAM)
+		axiaDestroyShaderProgram(&(*win)->text_shader);
 
 	if((*win)->cursor != NULL)
 		glfwDestroyCursor((*win)->cursor);
+
+	if((*win)->win == glfwGetCurrentContext())
+		glfwMakeContextCurrent(NULL);
 
 	if((*win)->win != NULL)
 		glfwDestroyWindow((*win)->win);
@@ -225,12 +293,12 @@ void axiaUseWinView(AxiaWindow win) {
 	glUniformMatrix4fv(0, 1, GL_FALSE, win->view.combined);
 }
 
-void axiaUseWinShaderProgram(AxiaWindow win) {
-	glUseProgram(win->shader);
-}
-
 AxiaView axiaGetWinView(AxiaWindow win) {
 	return &win->view;
+}
+
+void axiaUseWinShaderProgram(AxiaWindow win) {
+	glUseProgram(win->basic_shader);
 }
 
 		//========================//

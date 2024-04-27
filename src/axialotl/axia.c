@@ -1,13 +1,16 @@
-#include "deps.h"
+//==============================//
+//  This file defines the       //
+//  init and deinit functions,  //
+//  and thereby assigns values  //
+//  to the static variables     //
+//==============================//
 
-/////////////////////////////
-// Prevent the library to be
-// initialized twice or more
-// times
+#include "axia.h"
+
 static bool initialized = false;
 
-uint32_t AXIA_VERSION_MAJOR = 3;
-uint32_t AXIA_VERSION_MINOR = 3;
+uint32_t   AXIA_VERSION_MAJOR;
+uint32_t   AXIA_VERSION_MINOR;
 
 AxiaError axiaInitializeFunction(uint32_t version_major, uint32_t version_minor)
 {
@@ -36,9 +39,14 @@ AxiaError axiaInitializeFunction(uint32_t version_major, uint32_t version_minor)
 	if(glewInit() != GLEW_OK)
 		return AXIA_GLEW_ERROR;
 
-	glfwDestroyWindow(t);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	initialized = true;
+
+	glfwDestroyWindow(t);
+
 	return AXIA_OK;
 }
 

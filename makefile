@@ -4,7 +4,7 @@
 Debug := -DAXIA_DEBUG
 
 Libs  := -g -lGLEW -lglfw -lGL -lX11 -lpthread -lXrandr -lXi \
-		 -ldl -Wall -lm $(Debug)
+		 -ldl -Wall -lm -lfreetype $(Debug)
 Libsc := $(Libs) -c
 Objs  := bin/math.o bin/window.o bin/input.o bin/render.o bin/shaders.o bin/drawables.o
 
@@ -12,8 +12,8 @@ main: bin/axia.o
 	@gcc bin/axia.o src/main.c -o axialotl $(Libs) 
 	@./axialotl
 
-bin/axia.o: $(Objs) src/dependencies/deps.c
-	@gcc src/dependencies/deps.c $(Libsc) -o bin/deps.o
+bin/axia.o: $(Objs) src/axialotl/axia.c src/axialotl/axia.h
+	@gcc src/axialotl/axia.c $(Libsc) -o bin/deps.o
 	@ld -r $(Objs) bin/deps.o -o bin/axia.o
 
 bin/render.o: src/render/render.c src/render/render.h

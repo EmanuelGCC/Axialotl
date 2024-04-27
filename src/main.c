@@ -1,50 +1,62 @@
-#include "drawables/geometry.h"
-#include "math/matrix.h"
-#include "window/window.h"
+#include "axialotl/axia.h"
+#include "render/render.h"
 
 int main() 
 {
 	if(axiaInit())
 		return 100;
 
-	AxiaWindow win = axiaCreateWindow(1000, 900, "Please work, Axia!", NULL, AXIA_WIN_DEFAULT);
+	AxiaWindow win = axiaCreateWindow(900, 900, "Please work, Axia!", AXIA_WIN_DEFAULT);
 	if(win == NULL)
 		return 25;
-	
-	AxiaShape shape = axiaCreateRectangle(axiaVec2( 0.3, 0.3 ), axiaVec3( 0, 0, 0 ));
-	AxiaMatPtr mat = axiaGetShapeMatrix(shape);
+
+	AxiaShape shape = axiaCreateRectangle(axiaVec2( 2, 2 ), axiaVec3( -1, -1, 0 ));
 
 	AxiaTexture tex = axiaCreateTexture();
-	axiaLoadFromImage(tex, "/home/emanuel/Downloads/sphere/bin/earth2048.bmp");
+	AxiaFramebuffer framebuffer = axiaCreateFramebuffer((AxiaSize){ 900, 900 });
+	if(axiaLoadTextureSource(tex, GL_RGBA, (AxiaSize){ 900, 900 }, NULL, false))
+		return 1;
+
+	axiaBindFramebufferTexture(framebuffer, tex);
+	axiaUseFramebuffer(framebuffer);
+	axiaClearColorFloat(0, 0, 0, 1);
+	axiaClear();
+	axiaUseWinFramebuffer(win);
+
+	AxiaFont font = axiaCreateFont("/home/emanuel/Downloads/Happiness-Sans-Regular.ttf", 50, true);
+	AxiaText text = axiaCreateText();
+
+	axiaBindTextFont(text, font);
+	//  Test with non-latin characters: 안녕하세요
+	axiaSetTextString(text, L"안녕하세요", 10, AXIA_FORMAT_UTF16);
+	axiaSetTextColor(text, 223, 175, 175);
+	
+	axiaDrawText(text, framebuffer);
 
 	axiaBindShapeTexture(shape, tex);
 
 	axiaClearColorFloat(0.3, 0.3, 0.3, 1);
 
-	AxiaGamepad gp;
-
 	while(axiaIsWinOpen(win))
 	{
 		axiaPollEvents();
-		axiaPollGamepad(&gp, 0);
 
 		axiaClear();
-
-		if(gp.buttons[AXIA_GP_BUTTON_DPAD_UP] || axiaKeyEvent(win, AXIA_KEY_UP, AXIA_PRESSED))       { mat[AXIA_RECT_Y] += 0.02; }
-		if(gp.buttons[AXIA_GP_BUTTON_DPAD_DOWN] || axiaKeyEvent(win, AXIA_KEY_DOWN, AXIA_PRESSED))   { mat[AXIA_RECT_Y] -= 0.02; }
-		if(gp.buttons[AXIA_GP_BUTTON_DPAD_RIGHT] || axiaKeyEvent(win, AXIA_KEY_RIGHT, AXIA_PRESSED)) { mat[AXIA_RECT_X] += 0.02; }
-		if(gp.buttons[AXIA_GP_BUTTON_DPAD_LEFT] || axiaKeyEvent(win, AXIA_KEY_LEFT, AXIA_PRESSED))   { mat[AXIA_RECT_X] -= 0.02; }
 
 		axiaDrawShape(shape);
 
 		axiaDisplay(win);
 	}
 
-	glDeleteTextures(1, &tex);
+	axiaDestroyFont(&font);
+	axiaDestroyText(&text);
+	axiaDestroyTexture(&tex);
+	axiaDestroyFramebuffer(&framebuffer);
 	axiaDestroyShape(&shape);
 	axiaDestroyWindow(&win);
 
+	printf("%x\n", glGetError());
 	axiaDeinit();
 
-	return glGetError();
+	return 0;
 }

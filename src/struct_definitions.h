@@ -50,7 +50,8 @@ struct AxiaWindow_t {
 	const char *title;
 	AxiaSize    size;
 
-	uint32_t    shader;
+	uint32_t basic_shader;
+	uint32_t text_shader;
 	struct AxiaView_t  view;
 
 	//  Input related  //
@@ -79,3 +80,28 @@ struct AxiaShape_t
 	GLenum   index_type;
 };
 
+typedef struct {
+	AxiaVec2 sizes;
+	AxiaVec2 bearings;
+	float    advance;
+} AxiaGlyphDetails;
+
+struct AxiaFont_t
+{
+	FT_Library        lib;
+	FT_Face           face;
+	uint32_t         *textures;
+	AxiaGlyphDetails *glyphs;
+};
+
+struct AxiaText_t
+{
+	uint32_t           vertex_buffer;
+	uint32_t           vertex_array;
+	AxiaMat            model;
+	float              color[3];
+	struct AxiaFont_t *font;
+	void              *string;
+	uint32_t           length;
+	uint8_t            format;
+};

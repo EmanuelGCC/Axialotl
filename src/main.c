@@ -28,7 +28,13 @@ int main()
 
 	axiaBindTextFont(text, font);
 	//  Test with non-latin characters: 안녕하세요
-	axiaSetTextString(text, L"안녕하세요", 10, AXIA_FORMAT_UTF16);
+	char str[] = { 
+		0xc5, 0x48, 
+		0xb1, 0x55, 
+		0xd5, 0x58, 
+		0xc1, 0x38, 
+		0xc6, 0x94, '\0' };
+	axiaSetTextString(text, str, 10, AXIA_FORMAT_UTF16);
 	axiaSetTextColor(text, 223, 175, 175);
 	
 	axiaDrawText(text, framebuffer);

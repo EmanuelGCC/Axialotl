@@ -147,22 +147,25 @@ void axiaDrawIndexedShape(AxiaShape shape)
 
 uint32_t axiaGetUTF16Index(AxiaText text, uint32_t *i)
 {
-	uint32_t r = FT_Get_Char_Index(text->font->face, 
-	                               ((uint16_t*)text->string)[*i]);
+	uint8_t *str      = (uint8_t*)text->string;
+	uint32_t ft_index = (str[*i] << 8) | str[*i + 1];
 	
 	*i += 2;
 
-	return r;
+	return FT_Get_Char_Index(text->font->face, ft_index);
 }
 
 uint32_t axiaGetUTF32Index(AxiaText text, uint32_t *i)
 {
-	uint32_t r = FT_Get_Char_Index(text->font->face, 
-	                               ((uint32_t*)text->string)[*i]);
-	
+	uint8_t *str = (uint8_t*)text->string;
+	uint32_t ft_index = (str[*i+0] << 24) | 
+	                    (str[*i+1] << 16) | 
+	                    (str[*i+2] << 8)  | 
+	                     str[*i+3];
+
 	*i += 4;
 
-	return r;
+	return FT_Get_Char_Index(text->font->face, ft_index);
 }
 
 uint32_t axiaGetUTF8Index(AxiaText text, uint32_t *i)
@@ -170,12 +173,12 @@ uint32_t axiaGetUTF8Index(AxiaText text, uint32_t *i)
 	uint8_t *str      = (uint8_t*)text->string;
 	uint32_t ft_index = ((uint8_t*)text->string)[*i];
 	
-	if(ft_index < 0x80) {
+	if((ft_index & 0x80) == 0) {
 		*i += 1;
 		return FT_Get_Char_Index(text->font->face, ft_index);
 	}
 
-	if(ft_index < 0xC0) {
+	if((ft_index & 0xE0) == 0xC0) {
 		ft_index = 
 			(((uint32_t)(str[*i] & 0x1F)) << 6) | ((str[*i+1] & 0x3F));
 		*i += 2;
@@ -183,10 +186,11 @@ uint32_t axiaGetUTF8Index(AxiaText text, uint32_t *i)
 		return FT_Get_Char_Index(text->font->face, ft_index);
 	}
 
-	if(ft_index < 0xE0) {
+	if((ft_index & 0xF0) == 0xE0) {
 		ft_index = (((uint32_t)(str[*i] & 0xF)) << 12) | 
 		           (((uint32_t)(str[*i+1] & 0x3F)) << 6) |
-		           (str[*i+3] & 0x3F);
+		           (str[*i+2] & 0x3F);
+
 		*i += 3;
 		
 		return FT_Get_Char_Index(text->font->face, ft_index);

@@ -1,4 +1,8 @@
-[] Make Window's shader static
+[] Add model support
+
+[] Add sound support
+
+[] Add animation support
 
 [] Look into the posibility of combining the element buffer and the vertex buffer
 [] Make all default shapes have a functioning texture (as an option at least)

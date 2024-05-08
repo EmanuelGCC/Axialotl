@@ -1,14 +1,34 @@
-[] Add model support
-
-[] Add sound support
+[] Add more debug utilities
+	- Debug error messeges in most functions
+		* All of sound.c pretty much
+		* Cretion functions
+		* Drawing functions...?
+	- Make more functions return AxiaError
+	- Add more pointer checking in functions
+	- Put pointer checking macros in each .c file that needs it
 
 [] Add animation support
+
+[] Add model support (gltf format for the sake of lightwigth-ness)
 
 [] Look into the posibility of combining the element buffer and the vertex buffer
 [] Make all default shapes have a functioning texture (as an option at least)
 [] Make Spheres efficient
 
+[] Select a licence and put it into all files.
+
+[] Look into removing deps.h as a concept
+
 ==== Completed ====
+
+[X] Add sound support
+	X Sound (streamed and in-memory)
+	X Sound groups (fros sfx, voices, etc)
+	X 3D positioning of listener and sound
+	X Fading-in/out
+	X Setting and getting sound pitch and volume
+	X Start, stop, an pause sounds
+	X Get duration of sound/music
 
 [X] Add text support
 

@@ -11,6 +11,8 @@ typedef enum {
 	AXIA_GLEW_ERROR         = 0x6,
 	AXIA_LODING_FAILED      = 0x7,
 	AXIA_INVALID_CONDITIONS = 0x8,
+	AXIA_INVALID_ENUM       = 0x9,
+	AXIA_OUT_OF_BOUNDS      = 0xA,
 } AxiaError;
 
 #define axiaCheckAlloc(ptr) if ((ptr) == NULL) { return AXIA_FAILED_MALLOC; }

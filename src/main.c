@@ -1,5 +1,6 @@
 #include "axialotl/axia.h"
 #include "render/render.h"
+#include "sound/sound.h"
 
 int main() 
 {
@@ -10,38 +11,22 @@ int main()
 	if(win == NULL)
 		return 25;
 
+	AxiaAudioPlayer player = axiaCreateAudioPlayer(1, 0, 1);
+	if(player == NULL)
+		return 34567;
 	AxiaShape shape = axiaCreateRectangle(axiaVec2( 2, 2 ), axiaVec3( -1, -1, 0 ));
-
 	AxiaTexture tex = axiaCreateTexture();
-	AxiaFramebuffer framebuffer = axiaCreateFramebuffer((AxiaSize){ 900, 900 });
-	if(axiaLoadTextureSource(tex, GL_RGBA, (AxiaSize){ 900, 900 }, NULL, false))
-		return 1;
-
-	axiaBindFramebufferTexture(framebuffer, tex);
-	axiaUseFramebuffer(framebuffer);
-	axiaClearColorFloat(0, 0, 0, 1);
-	axiaClear();
-	axiaUseWinFramebuffer(win);
-
-	AxiaFont font = axiaCreateFont("/home/emanuel/Downloads/Happiness-Sans-Regular.ttf", 50, true);
-	AxiaText text = axiaCreateText();
-
-	axiaBindTextFont(text, font);
-	//  Test with non-latin characters: 안녕하세요
-	char str[] = { 
-		0xc5, 0x48, 
-		0xb1, 0x55, 
-		0xd5, 0x58, 
-		0xc1, 0x38, 
-		0xc6, 0x94, '\0' };
-	axiaSetTextString(text, str, 10, AXIA_FORMAT_UTF16);
-	axiaSetTextColor(text, 223, 175, 175);
+	axiaLoadFromImage(tex, "/home/emanuel/Pictures/New_Sun.png");
 	
-	axiaDrawText(text, framebuffer);
-
 	axiaBindShapeTexture(shape, tex);
 
 	axiaClearColorFloat(0.3, 0.3, 0.3, 1);
+
+	if(axiaLoadSoundFromFile(player, 0, "/home/emanuel/Documents/Dev/C/AudioTest/sound.wav", 0, AXIA_SOUND_DECODE) != AXIA_OK)
+		return 998;
+
+	printf("length in sec: %f\nlength in pcm: %ld\n", axiaGetSoundLengthSec(player,0), axiaGetSoundLengthPcmFrames(player,0));
+	axiaSetSoundState(player, 0, AXIA_SOUND_START);
 
 	while(axiaIsWinOpen(win))
 	{
@@ -54,10 +39,8 @@ int main()
 		axiaDisplay(win);
 	}
 
-	axiaDestroyFont(&font);
-	axiaDestroyText(&text);
+	axiaDestroyAudioPlayer(&player);
 	axiaDestroyTexture(&tex);
-	axiaDestroyFramebuffer(&framebuffer);
 	axiaDestroyShape(&shape);
 	axiaDestroyWindow(&win);
 

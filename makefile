@@ -6,7 +6,7 @@ Debug := -DAXIA_DEBUG
 Libs  := -g -lGLEW -lglfw -lGL -lX11 -lpthread -lXrandr -lXi \
 		 -ldl -Wall -lm -lfreetype $(Debug)
 Libsc := $(Libs) -c
-Objs  := bin/math.o bin/window.o bin/input.o bin/render.o bin/shaders.o bin/drawables.o
+Objs  := bin/math.o bin/window.o bin/input.o bin/render.o bin/shaders.o bin/drawables.o bin/sound.o
 
 main: bin/axia.o
 	@gcc bin/axia.o src/main.c -o axialotl $(Libs) 
@@ -31,6 +31,15 @@ test_window: $(win) tests/src/window/main.o
 
 bin/window.o: src/window/window.c src/window/window.h
 	@gcc src/window/window.c -o bin/window.o $(Libsc)
+
+bin/sound.o: src/sound/sound.c src/sound/sound.h src/dependencies/miniaudio/miniaudio.o
+	@gcc src/sound/sound.c -o bin/sound_tmp.o $(Libsc)
+	@echo "Done??"
+	@ld -r src/dependencies/miniaudio/miniaudio.o bin/sound_tmp.o -o bin/sound.o
+	@rm bin/sound_tmp.o
+	
+src/dependencies/miniaudio/miniaudio.o:
+	@gcc src/dependencies/miniaudio/miniaudio.c -c -ldl -lm -lpthread -o src/dependencies/miniaud/miniaudio.o
 
 bin/input.o: src/window/input/input.c src/window/input/input.h
 	@gcc src/window/input/input.c -o bin/input.o $(Libsc)

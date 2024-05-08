@@ -9,15 +9,12 @@
 //  The reading capabilities    //
 //  of AxiaTexture is thanks    //
 //  to The ImageMagick library  //
-//==============================//
-
+//===================================//
+//  See drawables.c for definitions  //
+//===================================//
 #pragma once
 
 #include "../dependencies/deps.h"
-
-//==================================//
-//  See drawables.c for definition  //
-//==================================//
 
 typedef const uint32_t AxiaTexture;
 

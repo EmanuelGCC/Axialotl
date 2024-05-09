@@ -15,4 +15,21 @@ typedef enum {
 	AXIA_OUT_OF_BOUNDS      = 0xA,
 } AxiaError;
 
-#define axiaCheckAlloc(ptr) if ((ptr) == NULL) { return AXIA_FAILED_MALLOC; }
+#ifdef AXIA_DEBUG
+#define axiaprintdbg(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define axiaprintdbg(...) {}
+#endif
+
+/////////////////////////////////////////////////
+// This macro is used specifically to check
+// for errors in the arguments passed to a function
+#ifndef AXIA_NO_ARG_CHECKING
+#define axiacheckarg(condition, ret, ...) \
+	if(condition) {\
+		axiaprintdbg(__VA_ARGS__); \
+		return ret;    \
+	}
+#else
+#define axiacheckarg(...) {}
+#endif

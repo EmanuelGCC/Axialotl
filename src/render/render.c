@@ -14,8 +14,10 @@ AxiaView axiaCreateView(
 		const AxiaVec3 target,      const AxiaVec3 up)
 {
 	AxiaView ret = malloc(sizeof(AxiaView_t));
-	if(ret == NULL)
+	if(ret == NULL) {
+		axiaprintdbg("[axiaCreateView] Failed to allocate space for AxiaView\n");
 		return NULL;
+	}
 
 	axiaProjectionMat(ret->projection, 
 	                   (float)target_size.height / (float)target_size.width,
@@ -36,6 +38,8 @@ void axiaDestroyView(AxiaView *view)
 
 void axiaChangeViewTargetSize(AxiaView view, const AxiaSize new_size)
 {
+	axiacheckarg(view == NULL,, "[axiaChangeViewTargetSize] AxiaView is NULL\n");
+
 	axiaProjectionMat(view->projection, 
 	                   (float)new_size.height / (float)new_size.width,
 	                   45.f, 0.1f, 100.f);
@@ -44,16 +48,22 @@ void axiaChangeViewTargetSize(AxiaView view, const AxiaSize new_size)
 void axiaChangeViewLookAt(AxiaView view,         const AxiaVec3 cam_pos, 
                           const AxiaVec3 target, const AxiaVec3 up)
 {
+	axiacheckarg(view == NULL,, "[axiaChangeViewLookAt] AxiaView is NULL\n");
+
 	axiaLookAt(view->view, cam_pos, target, up);
 }
 
 void axiaUpdateView(AxiaView view)
 {
+	axiacheckarg(view == NULL,, "[axiaUpdateView] AxiaView is NULL\n");
+
 	axiaMatXMat(view->combined, view->projection, view->view);
 }
 
 void axiaUseView(const AxiaView view)
 {
+	axiacheckarg(view == NULL,, "[axiaUseView] AxiaView is NULL\n");
+
 	glUniformMatrix4fv(0, 1, GL_FALSE, view->combined);
 }
 
@@ -64,8 +74,10 @@ void axiaUseView(const AxiaView view)
 AxiaFramebuffer axiaCreateFramebuffer(const AxiaSize size)
 {
 	AxiaFramebuffer ret = malloc(sizeof(AxiaFramebuffer_t));
-	if(ret == NULL)
+	if(ret == NULL) {
+		axiaprintdbg("[axiaCreateFramebuffer] Failed to allocate AxiaFramebuffer\n");
 		return NULL;
+	}
 
 	glGenFramebuffers(1, &ret->framebuffer);
 	glGenRenderbuffers(1, &ret->renderbuffer);
@@ -84,6 +96,7 @@ AxiaFramebuffer axiaCreateFramebuffer(const AxiaSize size)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		axiaprintdbg("[axiaCreateFramebuffer] Failed framebuffer creation\n");
 		axiaDestroyFramebuffer(&ret);
 		return NULL;
 	}
@@ -104,6 +117,9 @@ void axiaDestroyFramebuffer(AxiaFramebuffer *framebuffer)
 
 void axiaBindFramebufferTexture(AxiaFramebuffer framebuffer, AxiaTexture texture)
 {
+	axiacheckarg(framebuffer == NULL,, 
+	             "[axiaBindFramebufferTexture] AxiaFramebuffer is NULL\n");
+
 	GLint prm;
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prm);
 	
@@ -117,6 +133,9 @@ void axiaBindFramebufferTexture(AxiaFramebuffer framebuffer, AxiaTexture texture
 
 void axiaUseFramebuffer(AxiaFramebuffer framebuffer)
 {
+	axiacheckarg(framebuffer == NULL,, 
+	             "[axiaUseFramebuffer] AxiaFramebuffer is NULL\n");
+
 	glViewport(0, 0, framebuffer->size.width, framebuffer->size.height);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
 }
@@ -127,6 +146,8 @@ void axiaUseFramebuffer(AxiaFramebuffer framebuffer)
 
 void axiaDrawShape(AxiaShape shape)
 {
+	axiacheckarg(shape == NULL,, "[axiaDrawShape] AxiaShape is NULL\n");
+
 	glBindVertexArray(shape->vertex_array);
 
 	glBindTexture(GL_TEXTURE_2D, shape->texture);
@@ -137,6 +158,8 @@ void axiaDrawShape(AxiaShape shape)
 
 void axiaDrawIndexedShape(AxiaShape shape)
 {
+	axiacheckarg(shape == NULL,, "[axiaDrawIndexedShape] AxiaShape is NULL\n");
+
 	glBindVertexArray(shape->vertex_array);
 
 	glBindTexture(GL_TEXTURE_2D, shape->texture);
@@ -207,6 +230,10 @@ uint32_t axiaGetUTF8Index(AxiaText text, uint32_t *i)
 
 void axiaDrawText(AxiaText text, AxiaFramebuffer target)
 {
+	axiacheckarg(text == NULL,, "[axiaDrawText] AxiaText is NULL\n");
+	axiacheckarg(target == NULL,, "[axiaDrawText] AxiaFramebuffer is NULL\n");
+
+
 	//  Get the current AxiaWindow to change shaders.
 	struct AxiaWindow_t *current_win = 
 		glfwGetWindowUserPointer(glfwGetCurrentContext());

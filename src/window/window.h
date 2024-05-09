@@ -28,7 +28,6 @@ typedef enum {
 	AXIA_WIN_RESIZEABLE = 0x1,
 	AXIA_WIN_DECORATED  = 0x2,
 	AXIA_WIN_VISIBLE    = 0x4,
-	AXIA_WIN_NO_SHADER  = 0x80,
 
 	AXIA_WIN_DEFAULT    = 0x7F,
 } AxiaWinOps;

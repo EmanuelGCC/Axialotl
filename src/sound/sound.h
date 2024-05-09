@@ -1,39 +1,28 @@
-//
-//  Put nice-looking description here
-//
-
+//========================================//
+//  This file contains the declaration    //
+//  of AxiaAudioPlayer and related        //
+//  funtions, which are used              //
+//  for playing and managing different    //
+//  form of audio, as well as giving      //
+//  support for things such as            //
+//  tridimensional positioning of         //
+//  sounds.                               //
+//                                        //
+//  This part of axialotl depends on the  //
+//  audio library miniaudio, which is     //
+//  included only in sound.c to allow     //
+//  developers exclude this part of       //
+//  axialotl if they so wish.             //
+//                                        //
+//  Also, miniaudio is a cool library :)  //
+//========================================//
 
 #pragma once
 
-#include "../dependencies/miniaudio/miniaudio.h"
 #include "../dependencies/deps.h"
 
-// TODO this is a very rough approximation of a file
-//      please finish this before putting it up
-
-/*
-
-	Idea: Manage to put AxiaAudioPlayer and AxiaSounds on one struct,
-	      and the user can retrive a handler to a sound in an array if needed
-		  which may never be.
-
-*/
-
-typedef struct {
-	bool     initialized;
-	ma_sound sound;
-} AxiaSound;
-
-struct AxiaAudioPlayer_t 
-{
-	ma_engine       engine;
-	uint32_t        listener_count;
-	uint32_t        sound_group_count;
-	ma_sound_group *sound_groups;
-	uint32_t        sound_count;
-	AxiaSound      *sounds;
-};
-
+///////////////////////////////
+// See sound.c for definition
 typedef struct AxiaAudioPlayer_t *AxiaAudioPlayer;
 
 typedef enum {

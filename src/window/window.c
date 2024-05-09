@@ -48,8 +48,10 @@ AxiaWindow axiaCreateWindow(
 		AxiaWinOps options)
 {	
 	AxiaWindow win = malloc(sizeof(AxiaWindow_t));
-	if(win == NULL)
+	if(win == NULL) {
+		axiaprintdbg("[axiaCreateWindow] Failed to allocate AxiaWindow\n");
 		return NULL;
+	}
 
 	win->size.width  = width;
 	win->size.height = height;
@@ -78,6 +80,7 @@ AxiaWindow axiaCreateWindow(
 	               (options & AXIA_WIN_VISIBLE) != 0);
 
 	if((win->win = glfwCreateWindow(width, height, title, NULL, NULL)) == NULL) {
+		axiaprintdbg("[axiaCreateWindow] Failed to create a GLFWwindow\n");
 		free(win);
 		return NULL;
 	}
@@ -119,8 +122,6 @@ AxiaWindow axiaCreateWindow(
 
 	glfwSetWindowUserPointer(win->win, win);
 
-	if((options & AXIA_WIN_NO_SHADER) != 0)
-		return win;
 {
 const char vertex_code[] = "#version 330\n"
 "layout (location = 0) in vec3 vertex;\n"
@@ -153,6 +154,7 @@ const char fragment_code[] = "#version 330\n"
 		axiaCreateShader(vertex_code, GL_VERTEX_SHADER);
 	
 	if(vertex == AXIA_INVALID_SHADER) {
+		axiaprintdbg("[axiaCreateWindow] Failed to create the basic vertex shader\n");
 		axiaDestroyWindow(&win);
 		return NULL;
 	}
@@ -161,6 +163,7 @@ const char fragment_code[] = "#version 330\n"
 		axiaCreateShader(fragment_code, GL_FRAGMENT_SHADER);
 
 	if(fragment == AXIA_INVALID_SHADER) {
+		axiaprintdbg("[axiaCreateWindow] Failed to create the basic fragment shader\n");
 		axiaDestroyShader(&vertex);
 		axiaDestroyWindow(&win);
 		return NULL;
@@ -175,6 +178,7 @@ const char fragment_code[] = "#version 330\n"
 	axiaDestroyShader(&fragment);
 
 	if(success != AXIA_OK) {
+		axiaprintdbg("[axiaCreateWindow] Failed to link the basic shader program\n");
 		axiaDestroyWindow(&win);
 		return NULL;
 	}
@@ -216,6 +220,7 @@ const char fragment_code[] = "#version 330\n"
 		axiaCreateShader(vertex_code, GL_VERTEX_SHADER);
 
 	if(vertex == AXIA_INVALID_SHADER) {
+		axiaprintdbg("[axiaCreateWindow] Failed to create the text vertex shader\n");
 		axiaDestroyWindow(&win);
 		return NULL;
 	}
@@ -224,6 +229,7 @@ const char fragment_code[] = "#version 330\n"
 		axiaCreateShader(fragment_code, GL_FRAGMENT_SHADER);
 
 	if(fragment == AXIA_INVALID_SHADER) {
+		axiaprintdbg("[axiaCreateWindow] Failed to create the tex vertex shader\n");
 		axiaDestroyShader(&vertex);
 		axiaDestroyWindow(&win);
 		return NULL;
@@ -238,6 +244,7 @@ const char fragment_code[] = "#version 330\n"
 	axiaDestroyShader(&fragment);
 
 	if(success != AXIA_OK) {
+		axiaprintdbg("[axiaCreateWindow] Failed to link the text shader program\n");
 		axiaDestroyWindow(&win);
 		return NULL;
 	}

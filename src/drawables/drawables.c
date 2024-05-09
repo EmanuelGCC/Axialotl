@@ -56,6 +56,9 @@ AxiaTexture axiaCreateTexture()
 
 void axiaDestroyTexture(AxiaTexture *texture)
 {
+	if(texture == NULL)
+		return;
+
 	glDeleteTextures(1, texture);
 	*(uint32_t*)texture = 0;
 }
@@ -63,9 +66,9 @@ void axiaDestroyTexture(AxiaTexture *texture)
 AxiaError axiaLoadTextureSource(AxiaTexture texture, AxiaTextureFormat format,
 		const AxiaSize size, const uint8_t *data, bool bitmapped)
 {
-	if(format != AXIA_RGBA && format != AXIA_RGB &&
-	   format != AXIA_RG   && format != AXIA_GRAY)
-		return AXIA_INVALID_ARG;
+	axiacheckarg(format != AXIA_RGBA && format != AXIA_RGB &&
+	             format != AXIA_RG   && format != AXIA_GRAY, AXIA_INVALID_ARG,
+				 "[axiaLoadTextureSource] The AxiaTextureFormat is invalid");
 
 	//  Acutally load the image
 
@@ -92,8 +95,10 @@ AxiaError axiaLoadFromImage(AxiaTexture texture, const char *img_path)
 	stbi_set_flip_vertically_on_load(true);
 	uint8_t *data = stbi_load(img_path, &size.width, &size.height, &channels, 0);
 
-	if(data == NULL)
+	if(data == NULL) {
+		axiaprintdbg("[axiaLoadFromImage] Failed to load the image");
 		return AXIA_LODING_FAILED;
+	}
 
 	/////////////////////////////////////////////////
 	//  Unfortunately, because of how OpenGL handles
@@ -129,8 +134,10 @@ void axiaTextureFromColor(AxiaTexture texture,
 AxiaShape axiaCreateShape(AxiaShapeDrawMode draw_mode)
 {
 	AxiaShape ret = malloc(sizeof(AxiaShape_t));
-	if(ret == NULL)
+	if(ret == NULL) {
+		axiaprintdbg("[axiaCreateShape] Failed to allocate AxiaShape\n");
 		return NULL;
+	}
 
 	axiaMakeMatDefault(ret->model);
 
@@ -166,6 +173,8 @@ void axiaPopulateShape(AxiaShape shape, const float *data,
                        uint32_t texcoor_start, 
                        size_t   texture_stride)
 {
+	axiacheckarg(shape == NULL,, "[axiaPopulateShape] AxiaShape is NULL\n");
+
 	glBindVertexArray(shape->vertex_array);
 	glBindBuffer(GL_ARRAY_BUFFER, shape->vertex_buffer);
 
@@ -185,8 +194,8 @@ AxiaError axiaShapeIndices(AxiaShape shape, const void *indices,
                            uint32_t index_count,
                            AxiaIndexType index_type)
 {
-	if(shape == NULL)
-		return AXIA_INVALID_ARG;
+	axiacheckarg(shape == NULL, AXIA_INVALID_ARG, 
+	             "[axiaShapeIndices] AxiaShape is NULL\n");
 
 	uint32_t size;
 	switch(index_type) {
@@ -213,11 +222,17 @@ AxiaError axiaShapeIndices(AxiaShape shape, const void *indices,
 
 AxiaMatPtr axiaGetShapeMatrix(AxiaShape shape)
 {
+	axiacheckarg(shape == NULL, NULL, 
+	             "[axiaGetShapeMatrix] AxiaShape is NULL\n");
+
 	return shape->model;
 }
 
 void axiaBindShapeTexture(AxiaShape shp, AxiaTexture tex)
 {
+	axiacheckarg(shp == NULL,, 
+	             "[axiaBindShapeTexture] AxiaShape is NULL\n");
+
 	shp->texture = tex;
 }
 
@@ -228,6 +243,8 @@ void axiaBindShapeTexture(AxiaShape shp, AxiaTexture tex)
 AxiaShape axiaCreateRectangle(AxiaVec2 size, AxiaVec3 pos)
 {
 	AxiaShape rec = axiaCreateShape(AXIA_DRAW_TRIANGLE_STRIP);
+	if(rec == NULL)
+		return NULL;
 
 	float data[] = {
 		0, 0, 0,  1, 0, 0,
@@ -248,6 +265,8 @@ AxiaShape axiaCreateRectangle(AxiaVec2 size, AxiaVec3 pos)
 AxiaShape axiaCreateCube(AxiaVec3 size, AxiaVec3 pos)
 {
 	AxiaShape cub = axiaCreateShape(AXIA_DRAW_TRIANGLE_STRIP);
+	if(cub == NULL)
+		return NULL;
 
 	float data[] = {
 		0, 0, 0,  1, 0, 0,
@@ -276,6 +295,8 @@ AxiaShape axiaCreateCube(AxiaVec3 size, AxiaVec3 pos)
 AxiaShape axiaCreateTriangle(AxiaVec3 pos, AxiaVec3 vert1, AxiaVec3 vert2)
 {
 	AxiaShape tri = axiaCreateShape(AXIA_DRAW_TRIANGLES);
+	if(tri == NULL)
+		return NULL;
 
 	float data[] = {
 		0, 0, 0,  1, 0, 0,  0, 1, 0
@@ -302,6 +323,8 @@ AxiaShape axiaCreateTetrahedron(AxiaVec3 pos, AxiaVec3 vert1,
                                 AxiaVec3 vert2, AxiaVec3 vert3)
 {
 	AxiaShape tet = axiaCreateShape(AXIA_DRAW_TRIANGLE_STRIP);
+	if(tet == NULL)
+		return NULL;
 
 	float data[] = {
 		0, 0, 0,  0, 0, 1,
@@ -338,9 +361,18 @@ AxiaShape axiaCreateCircle(AxiaVec3 pos, float radious, uint8_t comp)
 	const uint16_t complexity = comp << 2;
 
 	AxiaShape cir = axiaCreateShape(AXIA_DRAW_TRIANGLE_FAN);
+	if(cir == NULL)
+		return NULL;
 
 	float *data = malloc(sizeof(float) * complexity*
 	                     (sizeof(AxiaVec3)+sizeof(AxiaVec2)));
+
+	if(data == NULL) {
+		axiaprintdbg("[axiaCreateCircle] Failed to allocate the circle data");
+		axiaDestroyShape(&cir);
+		return NULL;
+	}
+
 	AxiaVec3 *vertices = (AxiaVec3*)data;
 	AxiaVec2 *texture  = (AxiaVec2*)(data+complexity*3);
 
@@ -392,14 +424,28 @@ AxiaShape axiaCreateSphere(AxiaVec3 pos, float radious,
 */
 
 	AxiaShape sph = axiaCreateShape(AXIA_DRAW_TRIANGLES);
+	if(sph == NULL)
+		return NULL;
 
 	const uint16_t complexity  = (uint16_t)(horizontal + 1) * (vertical + 1);
 	const uint16_t index_count = 6 * (horizontal * (vertical - 1));
 	const float    latitude    = 2.f * M_PI / horizontal;
 	const float    longitude   = M_PI / vertical;
 
-	uint8_t  *data       = malloc((sizeof(AxiaVec3) + sizeof(AxiaVec2)) * complexity);
+	uint8_t  *data = malloc((sizeof(AxiaVec3) + sizeof(AxiaVec2)) * complexity);
+	if(data == NULL) {
+		axiaprintdbg("[axiaCreateSphere] Failed to allocate the sphere data\n");
+		axiaDestroyShape(&sph);
+		return NULL;
+	}
 	uint16_t *indices    = malloc(sizeof(uint16_t) * index_count);
+	if(data == NULL) {
+		axiaprintdbg("[axiaCreateSphere] Failed to allocate the sphere indices\n");
+		free(data);
+		axiaDestroyShape(&sph);
+		return NULL;
+	}
+
 	AxiaVec3 *vertices   = (AxiaVec3*)data;
 	AxiaVec2 *tex_coords = (AxiaVec2*)(data+(sizeof(AxiaVec3) * complexity));
 
@@ -487,16 +533,41 @@ AxiaFont axiaCreateFont(const char *font_path,
 	FT_Face    face;
 
 	FT_Init_FreeType(&lib);
-	if(FT_New_Face(lib, font_path, 0, &face))
+	if(FT_New_Face(lib, font_path, 0, &face)) {
+		axiaprintdbg("[axiaCreateFont] Failed to create the FreeType face\n");
+		FT_Done_FreeType(lib);
 		return NULL;
+	}
 
 	AxiaFont font = malloc(sizeof(AxiaFont_t));
+	if(font == NULL) {
+		axiaprintdbg("[axiaCreateFont] Failed to allocate the font\n");
+		FT_Done_Face(face);
+		FT_Done_FreeType(lib);
+		return NULL;
+	}
+
+	font->textures = malloc(sizeof(uint32_t) * face->num_glyphs);
+	if(font->textures == NULL) {
+		axiaprintdbg("[axiaCreateFont] Failed to allocate the font's textures\n");
+		FT_Done_Face(face);
+		FT_Done_FreeType(lib);
+		free(font);
+		return NULL;
+	}
+
+	font->glyphs = malloc(sizeof(AxiaGlyphDetails) * face->num_glyphs);
+	if(font->glyphs == NULL) {
+		axiaprintdbg("[axiaCreateFont] Failed to allocate the font's glyphs\n");
+		FT_Done_Face(face);
+		FT_Done_FreeType(lib);
+		free(font->textures);
+		free(font);
+		return NULL;
+	}	
 
 	font->lib  = lib;
 	font->face = face;
-
-	font->textures = malloc(sizeof(uint32_t) * face->num_glyphs);
-	font->glyphs   = malloc(sizeof(AxiaGlyphDetails) * face->num_glyphs);
 
 	glGenTextures(face->num_glyphs, font->textures);
 
@@ -558,14 +629,18 @@ void axiaDestroyFont(AxiaFont *font)
 
 size_t axiaGetGlyphCount(AxiaFont font)
 {
+	axiacheckarg(font == NULL, 0, "[axiaGetGlyphCount] font is NULL\n");
+
 	return font->face->num_glyphs;
 }
 
 AxiaText axiaCreateText()
 {
 	AxiaText text = malloc(sizeof(AxiaText_t));
-	if(text == NULL)
+	if(text == NULL) {
+		axiaprintdbg("Failed to allocate AxiaText\n");
 		return NULL;
+	}
 
 	float data[] = {
 		0.f, 0.f, 0.f,  1.f, 0.f, 0.f,
@@ -608,18 +683,23 @@ void axiaDestroyText(AxiaText *text)
 
 void axiaBindTextFont(AxiaText text, AxiaFont font)
 {
+	axiacheckarg(text == NULL,, "[axiaBindTextFont] AxiaText is NULL\n");
+	axiacheckarg(font == NULL,, "[axiaBindTextFont] AxiaFont is NULL\n");
+
 	text->font = font;
 }
 
 void axiaSetTextString(AxiaText text, void *string, 
                        uint32_t length, AxiaTextFormat format)
 {
+	axiacheckarg(text == NULL,, "[axiaSetTextString] AxiaText is NULL\n");
+	axiacheckarg(string == NULL && length != 0,, 
+	             "[axiaSetTextString] string is NULL and length is non-zero\n");
+
 	text->string = string;
 	text->length = length;
 	if((format & (AXIA_FORMAT_UTF16 | AXIA_FORMAT_UTF8 | AXIA_FORMAT_UTF32)) == 0) {
-#ifdef AXIA_DEBUG
-		printf("[axiaSetTextString] : Invalid format\n");
-#endif
+		axiaprintdbg("[axiaSetTextString] AxiaTextFormat is invalid, keeping old one\n");
 		return;
 	}
 
@@ -628,21 +708,29 @@ void axiaSetTextString(AxiaText text, void *string,
 
 void *axiaGetTextString(AxiaText text) 
 {
+	axiacheckarg(text == NULL, NULL, "[axiaGetTextString] AxiaText is NULL\n");
+
 	return text->string;
 }
 
 uint32_t axiaGetTextLength(AxiaText text)
 {
+	axiacheckarg(text == NULL, 0, "[axiaGetTextLength] AxiaText is NULL\n");
+
 	return text->length;
 }
 
 AxiaTextFormat axiaGetTextFormat(AxiaText text)
 {
+	axiacheckarg(text == NULL, -1, "[axiaGetTextFormat] AxiaText is NULL\n");
+
 	return text->format;
 }
 
 void axiaSetTextColor(AxiaText text, uint8_t r, uint8_t g, uint8_t b)
 {
+	axiacheckarg(text == NULL,, "[axiaSetTextColor] AxiaText is NULL\n");
+
 	text->color[0] = (float)r / 255;
 	text->color[1] = (float)g / 255;
 	text->color[2] = (float)b / 255;
@@ -650,6 +738,8 @@ void axiaSetTextColor(AxiaText text, uint8_t r, uint8_t g, uint8_t b)
 
 float *axiaGetTextColor(AxiaText text)
 {
+	axiacheckarg(text == NULL, NULL, "[axiaGetTextColor] AxiaText is NULL\n");
+
 	return text->color;
 }
 
@@ -660,6 +750,9 @@ float *axiaGetTextColor(AxiaText text)
 	
 AxiaError axiaSetWinIcon(struct AxiaWindow_t *win, const char* img)
 {
+	axiacheckarg(win == NULL, AXIA_INVALID_ARG, 
+	             "[axiaSetWinIcon] AxiaWindow is NULL\n");
+
 	int32_t width, height, channels;
 	uint8_t *data = stbi_load(img, &width, &height, &channels, 0);
 	if(data == NULL)
@@ -679,6 +772,9 @@ AxiaError axiaSetWinIcon(struct AxiaWindow_t *win, const char* img)
 AxiaError axiaMakeWinCursor(struct AxiaWindow_t *win, const char* img, 
 		                    int32_t xhot_spot, int32_t yhot_spot)
 {
+	axiacheckarg(win == NULL, AXIA_INVALID_ARG, 
+	             "[axiaMakeWinCursor] AxiaWindow is NULL\n");
+
 	int32_t width, height, channels;
 	uint8_t *data = stbi_load(img, &width, &height, &channels, 0);
 	if(data == NULL)

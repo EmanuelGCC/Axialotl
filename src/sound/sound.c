@@ -1,16 +1,60 @@
-//  
-//  Put nice-looking description here
-//
+//=====================================//
+//  This file contains the definition  //
+//  of both struct and functions       //
+//  declared in sound.h, as well as    //
+//  being the only file that includes  //
+//  miniaudio.h                        //
+//=====================================//
 
 #include "sound.h"
+#include "../dependencies/miniaudio/miniaudio.h"
+
+//========================//
+//  Debug error messeges  //
+//========================//
+
+#ifdef AXIA_DEBUG
+static const char *player_is_null = "[axia%s] AxiaAudioPlayer is NULL\n";
+static const char *sound_out_of_bounds = "[axia%s] sound_index is out of bounds\n";
+static const char *group_out_of_bounds = "[axia%s] group_index is out of bounds\n";
+#else
+#define player_is_null      ""
+#define sound_out_of_bounds ""
+#define group_out_of_bounds ""
+#endif
+
+//=====================//
+//  struct definition  //
+//=====================//
+
+typedef struct {
+	bool     initialized;
+	ma_sound sound;
+} AxiaSound;
+
+struct AxiaAudioPlayer_t 
+{
+	ma_engine       engine;
+	uint32_t        listener_count;
+	uint32_t        sound_group_count;
+	ma_sound_group *sound_groups;
+	uint32_t        sound_count;
+	AxiaSound      *sounds;
+};
+
+//=============//
+//  Functions  //
+//=============//
 
 AxiaAudioPlayer axiaCreateAudioPlayer(uint32_t listener_count, 
                                       uint32_t sound_group_count, 
 									  uint32_t sound_count)
 {
 	AxiaAudioPlayer player = malloc(sizeof(struct AxiaAudioPlayer_t));
-	if(player == NULL)
+	if(player == NULL) {
+		axiaprintdbg("Failed to allocate AxiaAudioPlayer\n");
 		return NULL;
+	}
 
 	player->listener_count    = listener_count;
 	player->sound_group_count = sound_group_count;
@@ -20,6 +64,7 @@ AxiaAudioPlayer axiaCreateAudioPlayer(uint32_t listener_count,
 	conf.listenerCount = listener_count;
 
 	if(ma_engine_init(&conf, &player->engine) != MA_SUCCESS) {
+		axiaprintdbg("Failed to create a miniaudio engine\n");
 		free(player);
 		return NULL;
 	}
@@ -28,12 +73,14 @@ AxiaAudioPlayer axiaCreateAudioPlayer(uint32_t listener_count,
 		player->sound_groups = malloc(sizeof(ma_sound_group) * sound_group_count);
 
 		if(player->sound_groups == NULL) {
+			axiaprintdbg("Failed to allocate space for the sound groups\n");
 			axiaDestroyAudioPlayer(&player);
 			return NULL;
 		}
 		
 		for(uint32_t i=0;i<sound_group_count;++i) {
 			if(ma_sound_group_init(&player->engine, 0, NULL, &player->sound_groups[i]) != MA_SUCCESS) {
+				axiaprintdbg("Failed create the sound group indexed %d\n", i);
 				player->sound_group_count = i;
 				axiaDestroyAudioPlayer(&player);
 				return NULL;
@@ -48,6 +95,7 @@ AxiaAudioPlayer axiaCreateAudioPlayer(uint32_t listener_count,
 
 	player->sounds = malloc(sizeof(AxiaSound) * sound_count);
 	if(player->sounds == NULL) {
+		axiaprintdbg("Failed to allocate space for the sounds\n");
 		axiaDestroyAudioPlayer(&player);
 		return NULL;
 	}	
@@ -91,11 +139,12 @@ AxiaError axiaLoadSoundFromFile(AxiaAudioPlayer audio_player, uint32_t sound_ind
                                 const char *file_path, uint32_t sound_group_index,
 								AxiaSoundInitFlags flags)
 {
-	if(audio_player == NULL)
-		return AXIA_INVALID_ARG;
+	axiacheckarg(audio_player == NULL, AXIA_INVALID_ARG, 
+	             player_is_null, "LoadSoundFromFile");
 
-	if(sound_index >= audio_player->sound_count)
-		return AXIA_OUT_OF_BOUNDS;
+	axiacheckarg(sound_index >= audio_player->sound_count,
+	          AXIA_OUT_OF_BOUNDS,
+	          sound_out_of_bounds, "LoadSoundFromFile");
 
 	if(audio_player->sounds[sound_index].initialized)
 		ma_sound_uninit(&audio_player->sounds[sound_index].sound);
@@ -131,11 +180,11 @@ AxiaError axiaLoadSoundFromFile(AxiaAudioPlayer audio_player, uint32_t sound_ind
 void axiaSetSoundState(AxiaAudioPlayer audio_player, 
                        uint32_t sound_index, AxiaSoundState state)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundState");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundState");
 
 	if(state == AXIA_SOUND_START)
 		ma_sound_start(&audio_player->sounds[sound_index].sound);
@@ -147,11 +196,11 @@ void axiaSetSoundFadeIOFrames(AxiaAudioPlayer audio_player,
                               uint32_t sound_index, uint64_t fade_frames, 
                               float volume_start, float volume_end)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundFadeIOFrames");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundFadeIOFrames");
 
 	ma_sound_set_fade_in_pcm_frames(&audio_player->sounds[sound_index].sound,
 	                                volume_start, volume_end, fade_frames);
@@ -161,11 +210,11 @@ void axiaSetSoundFadeIOMiliSec(AxiaAudioPlayer audio_player,
                               uint32_t sound_index, uint64_t fade_secs, 
                               float volume_start, float volume_end)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundFadeIOMiliSec");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundFadeIOMiliSec");
 
 	ma_sound_set_fade_in_milliseconds(&audio_player->sounds[sound_index].sound,
 	                                  volume_start, volume_end, fade_secs);
@@ -173,17 +222,23 @@ void axiaSetSoundFadeIOMiliSec(AxiaAudioPlayer audio_player,
 
 void axiaSetSoundVolume(AxiaAudioPlayer audio_player, uint32_t sound_index, float volume)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundVolume");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundVolume");
 
 	ma_sound_set_volume(&audio_player->sounds[sound_index].sound, volume);
 }
 
 float axiaGetSoundVolume(AxiaAudioPlayer audio_player, uint32_t sound_index)
 {
+	axiacheckarg(audio_player == NULL, -100.f,
+	             player_is_null, "GetSoundVolume");
+
+	axiacheckarg(sound_index >= audio_player->sound_count, -200.f,
+	             sound_out_of_bounds, "GetSoundVolume");
+
 	if(audio_player == NULL)
 		return -100.f;
 
@@ -195,22 +250,22 @@ float axiaGetSoundVolume(AxiaAudioPlayer audio_player, uint32_t sound_index)
 
 void axiaSetSoundPitch(AxiaAudioPlayer audio_player, uint32_t sound_index, float pitch)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundPitch");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundPitch");
 
 	ma_sound_set_pitch(&audio_player->sounds[sound_index].sound, pitch);
 }
 
 float axiaGetSoundPitch(AxiaAudioPlayer audio_player, uint32_t sound_index)
 {
-	if(audio_player == NULL)
-		return -100.f;
+	axiacheckarg(audio_player == NULL,-100.f,
+	             player_is_null, "GetSoundPitch");
 
-	if(sound_index >= audio_player->sound_count)
-		return -200.f;
+	axiacheckarg(sound_index >= audio_player->sound_count,-200.f,
+	             sound_out_of_bounds, "GetSoundPitch");
 
 	return ma_sound_get_pitch(&audio_player->sounds[sound_index].sound);
 }
@@ -218,11 +273,11 @@ float axiaGetSoundPitch(AxiaAudioPlayer audio_player, uint32_t sound_index)
 void axiaSetSoundPosition(AxiaAudioPlayer audio_player, uint32_t sound_index, 
                           AxiaVec3 position)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundPosition");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundPosition");
 
 	ma_sound_set_position(&audio_player->sounds[sound_index].sound,
 	                      position.x, position.y, position.z);
@@ -230,11 +285,11 @@ void axiaSetSoundPosition(AxiaAudioPlayer audio_player, uint32_t sound_index,
 
 AxiaVec3 axiaGetSoundPosition(AxiaAudioPlayer audio_player, uint32_t sound_index)
 {
-	if(audio_player == NULL)
-		return axiaVec3(0, 0, 0);
+	axiacheckarg(audio_player == NULL, axiaVec3(0,0,0),
+	             player_is_null, "GetSoundPosition");
 
-	if(sound_index >= audio_player->sound_count)
-		return axiaVec3(0, 0, 0);
+	axiacheckarg(sound_index >= audio_player->sound_count, axiaVec3(0,0,0),
+	             sound_out_of_bounds, "GetSoundPosition");
 
 	ma_vec3f temp;
 	temp = ma_sound_get_position(&audio_player->sounds[sound_index].sound);
@@ -244,11 +299,11 @@ AxiaVec3 axiaGetSoundPosition(AxiaAudioPlayer audio_player, uint32_t sound_index
 void axiaSetSoundDirection(AxiaAudioPlayer audio_player, uint32_t sound_index, 
                            AxiaVec3 direction)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundDirection");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundDirection");
 
 	ma_sound_set_direction(&audio_player->sounds[sound_index].sound,
 	                      direction.x, direction.y, direction.z);
@@ -256,11 +311,11 @@ void axiaSetSoundDirection(AxiaAudioPlayer audio_player, uint32_t sound_index,
 
 AxiaVec3 axiaGetSoundDirection(AxiaAudioPlayer audio_player, uint32_t sound_index)
 {
-	if(audio_player == NULL)
-		return axiaVec3(0, 0, 0);
+	axiacheckarg(audio_player == NULL, axiaVec3(0,0,0),
+	             player_is_null, "GetSoundDirection");
 
-	if(sound_index >= audio_player->sound_count)
-		return axiaVec3(0, 0, 0);
+	axiacheckarg(sound_index >= audio_player->sound_count, axiaVec3(0,0,0),
+	             sound_out_of_bounds, "GetSoundDirection");
 
 	ma_vec3f temp;
 	temp = ma_sound_get_direction(&audio_player->sounds[sound_index].sound);
@@ -270,33 +325,33 @@ AxiaVec3 axiaGetSoundDirection(AxiaAudioPlayer audio_player, uint32_t sound_inde
 void axiaSetSoundLooping(AxiaAudioPlayer audio_player, 
                          uint32_t sound_index, bool looping)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundLooping");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundLooping");
 
 	ma_sound_set_looping(&audio_player->sounds[sound_index].sound, looping);
 }
 
 bool aixaIsSoundLooping(AxiaAudioPlayer audio_player, uint32_t sound_index)
 {
-	if(audio_player == NULL)
-		return false;
+	axiacheckarg(audio_player == NULL, false,
+	             player_is_null, "IsSoundLooping");
 
-	if(sound_index >= audio_player->sound_count)
-		return false;
+	axiacheckarg(sound_index >= audio_player->sound_count, false,
+	             sound_out_of_bounds, "IsSoundLooping");
 
 	return ma_sound_is_looping(&audio_player->sounds[sound_index].sound);
 }
 
 float axiaGetSoundLengthSec(AxiaAudioPlayer audio_player, uint32_t sound_index)
 {
-	if(audio_player == NULL)
-		return 0;
+	axiacheckarg(audio_player == NULL, 0,
+	             player_is_null, "GetSoundLengthSec");
 
-	if(sound_index >= audio_player->sound_count)
-		return 0;
+	axiacheckarg(sound_index >= audio_player->sound_count, 0,
+	             sound_out_of_bounds, "GetSoundLengthSec");
 
 	float len;
 	if(ma_sound_get_length_in_seconds(
@@ -308,11 +363,11 @@ float axiaGetSoundLengthSec(AxiaAudioPlayer audio_player, uint32_t sound_index)
 
 uint64_t axiaGetSoundLengthPcmFrames(AxiaAudioPlayer audio_player, uint32_t sound_index)
 {
-	if(audio_player == NULL)
-		return 0;
+	axiacheckarg(audio_player == NULL, 0,
+	             player_is_null, "GetSoundLengthPcmFrames");
 
-	if(sound_index >= audio_player->sound_count)
-		return 0;
+	axiacheckarg(sound_index >= audio_player->sound_count, 0,
+	             sound_out_of_bounds, "GetSoundLengthPcmFrames");
 
 	uint64_t len;
 	if(ma_sound_get_length_in_pcm_frames(
@@ -325,11 +380,11 @@ uint64_t axiaGetSoundLengthPcmFrames(AxiaAudioPlayer audio_player, uint32_t soun
 void axiaSoundSeekPcmFrame(AxiaAudioPlayer audio_player, 
                            uint32_t sound_index, uint64_t frame)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SoundSeekPcmFrame");
 
-	if(sound_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(sound_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SoundSeekPcmFrame");
 	
 	ma_sound_seek_to_pcm_frame(&audio_player->sounds[sound_index].sound, frame);
 }
@@ -337,22 +392,22 @@ void axiaSoundSeekPcmFrame(AxiaAudioPlayer audio_player,
 void axiaSetSoundGroupVolume(AxiaAudioPlayer audio_player, 
                              uint32_t group_index, float volume)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundGroupVolume");
 
-	if(group_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(group_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundGroupVolume");
 
 	ma_sound_group_set_volume(&audio_player->sound_groups[group_index], volume);
 }
 
 float axiaGetSoundGroupVolume(AxiaAudioPlayer audio_player, uint32_t group_index)
 {
-	if(audio_player == NULL)
-		return 0;
+	axiacheckarg(audio_player == NULL, 0,
+	             player_is_null, "GetSoundGroupVolume");
 
-	if(group_index >= audio_player->sound_count)
-		return 0;
+	axiacheckarg(group_index >= audio_player->sound_count, 0,
+	             sound_out_of_bounds, "GetSoundGroupVolume");
 
 	return ma_sound_group_get_volume(&audio_player->sound_groups[group_index]);
 }
@@ -360,22 +415,22 @@ float axiaGetSoundGroupVolume(AxiaAudioPlayer audio_player, uint32_t group_index
 void axiaSetSoundGroupPitch(AxiaAudioPlayer audio_player, 
                              uint32_t group_index, float pitch)
 {
-	if(audio_player == NULL)
-		return;
+	axiacheckarg(audio_player == NULL,,
+	             player_is_null, "SetSoundGroupPitch");
 
-	if(group_index >= audio_player->sound_count)
-		return;
+	axiacheckarg(group_index >= audio_player->sound_count,,
+	             sound_out_of_bounds, "SetSoundGroupPitch");
 
 	ma_sound_group_set_pitch(&audio_player->sound_groups[group_index], pitch);
 }
 
 float axiaGetSoundGroupPitch(AxiaAudioPlayer audio_player, uint32_t group_index)
 {
-	if(audio_player == NULL)
-		return 0;
+	axiacheckarg(audio_player == NULL, 0,
+	             player_is_null, "GetSoundGroupPitch");
 
-	if(group_index >= audio_player->sound_count)
-		return 0;
+	axiacheckarg(group_index >= audio_player->sound_count, 0,
+	             sound_out_of_bounds, "GetSoundGroupPitch");
 
 	return ma_sound_group_get_pitch(&audio_player->sound_groups[group_index]);
 }
